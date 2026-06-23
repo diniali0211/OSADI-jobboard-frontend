@@ -35,7 +35,7 @@ export default function HireConfirmModal({
     setError(null);
     try {
       await jobBoardApi.setDecision({
-        candidate_id: String(candidate.id),
+        link_id: candidate.link_id,
         decision: "HIRED",
         recruiter,
         pin: pin.trim(),
