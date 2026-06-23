@@ -15,13 +15,9 @@ export type CandidateStatus =
   | "APPLICANT";
 
 export const RECRUITERS = [
-  "Kayryinna B",
-  "Jusnie R",
-  "Masmera",
-  "Ilham",
-  "Liyana",
-  "Armi",
-  "Zawani",
+  "Rachel",
+  "Syaf",
+  "Loh Shi Wei",
 ] as const;
 
 export const REJECT_REASONS = [
