@@ -58,10 +58,21 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
     setUploadNotice(null);
     try {
       const result = await jobBoardApi.uploadResumeForJob(job.id, file);
-      if (result.duplicate) {
-        setUploadNotice(
-          result.message || "This resume matches a candidate already in the system."
-        );
+     if (result.duplicate) {
+        if (result.already_linked_to_this_job) {
+          setUploadNotice(
+            "This candidate is already linked to this job — nothing changed."
+          );
+        } else if (result.linked) {
+          setUploadNotice(
+            (result.message || "This candidate already exists in the system.") +
+              " They've now also been linked to this job."
+          );
+        } else {
+          setUploadNotice(
+            result.message || "This resume matches a candidate already in the system."
+          );
+        }
       } else {
         setUploadNotice("Resume parsed and linked to this job.");
       }
@@ -88,7 +99,7 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
   async function handleKiv(candidate: JobCandidate) {
     setActionError(null);
     try {
-      await jobBoardApi.setDecision({ candidate_id: String(candidate.id), decision: "KIV" });
+      await jobBoardApi.setDecision({ link_id: candidate.link_id, decision: "KIV" });
       await loadCandidates();
       onChanged();
     } catch (err) {
@@ -188,7 +199,7 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
           )}
 
           {candidates.map((c) => (
-            <div key={c.id} className="candidate-card">
+            <div key={c.link_id} className="candidate-card">
               <div>
                 <div className="candidate-name">{c.name || "Unnamed candidate"}</div>
                 <div className="candidate-meta">
