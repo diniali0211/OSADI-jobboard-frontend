@@ -18,6 +18,7 @@ export const RECRUITERS = [
   "Rachel",
   "Syaf",
   "Loh Shi Wei",
+  "Test Recruiter",
 ] as const;
 
 export const REJECT_REASONS = [
