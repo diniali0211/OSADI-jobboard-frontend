@@ -61,6 +61,7 @@ export interface JobPayload {
 }
 
 export interface JobCandidate {
+  link_id: number; // identifies this candidate's relationship to THIS job
   id: number;
   name: string | null;
   email: string | null;
@@ -78,20 +79,22 @@ export interface JobCandidate {
 
 export interface AnalyzeResult {
   duplicate: boolean;
+  linked?: boolean;
+  already_linked_to_this_job?: boolean;
   message?: string;
   existing_candidate_id?: number;
   candidate_id?: number;
+  link_id?: number;
   analysis?: Record<string, unknown>;
 }
 
 export interface DecisionPayload {
-  candidate_id: string;
+  link_id: number;
   decision: CandidateStatus;
   reason?: string | null;
   recruiter?: string | null;
   pin?: string | null;
 }
-
 export interface ApiErrorBody {
   detail?: string;
 }
