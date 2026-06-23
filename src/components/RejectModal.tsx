@@ -33,7 +33,7 @@ export default function RejectModal({ candidate, onClose, onConfirmed }: RejectM
     setError(null);
     try {
       await jobBoardApi.setDecision({
-        candidate_id: String(candidate.id),
+        link_id: candidate.link_id,
         decision: "REJECTED",
         reason,
       });
