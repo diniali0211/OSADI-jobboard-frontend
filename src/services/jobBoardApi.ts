@@ -1,7 +1,9 @@
 import type {
   AnalyzeResult,
   DecisionPayload,
+  JobAuthPayload,
   JobCandidate,
+  JobEditPayload,
   JobPayload,
   JobPosting,
 } from "../types";
@@ -60,7 +62,7 @@ export const jobBoardApi = {
     return handle(res);
   },
 
-  async updateJob(jobId: number, payload: JobPayload): Promise<{ status: string }> {
+  async updateJob(jobId: number, payload: JobEditPayload): Promise<{ status: string }> {
     const res = await fetch(`${BASE_URL}/jobs/${jobId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -69,8 +71,12 @@ export const jobBoardApi = {
     return handle(res);
   },
 
-  async deleteJob(jobId: number): Promise<{ status: string }> {
-    const res = await fetch(`${BASE_URL}/jobs/${jobId}`, { method: "DELETE" });
+  async deleteJob(jobId: number, auth: JobAuthPayload): Promise<{ status: string }> {
+    const res = await fetch(`${BASE_URL}/jobs/${jobId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(auth),
+    });
     return handle(res);
   },
 
@@ -91,6 +97,9 @@ export const jobBoardApi = {
   },
 
   async getResumeUrl(candidateId: number): Promise<{ url: string }> {
+    // The stored resume_url is just an internal storage key, not a usable
+    // link — this asks the backend (which asks the main ATS) for a real,
+    // openable URL on demand.
     const res = await fetch(`${BASE_URL}/candidates/${candidateId}/resume-url`);
     return handle(res);
   },
