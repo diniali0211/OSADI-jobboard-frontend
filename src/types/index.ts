@@ -47,6 +47,7 @@ export interface JobPosting {
   offered: number;
   hired: number;
   remaining: number;
+  created_by_recruiter: string | null;
 }
 
 export interface JobPayload {
@@ -54,10 +55,19 @@ export interface JobPayload {
   position_title: string;
   employment_type: string;
   location?: string | null;
-  recruiter?: string | null;
+  recruiter: string; // required — every posting must have a known creator
   openings?: number;
   remark?: string | null;
   status?: string | null;
+}
+
+export interface JobEditPayload extends JobPayload {
+  pin: string; // the creator's PIN, required to prove ownership
+}
+
+export interface JobAuthPayload {
+  recruiter: string;
+  pin: string;
 }
 
 export interface JobCandidate {
