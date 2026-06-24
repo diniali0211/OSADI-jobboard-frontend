@@ -3,6 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { RECRUITERS } from "../types";
 import type { JobPayload, JobPosting } from "../types";
 import { jobBoardApi, ApiError } from "../services/jobBoardApi";
+import { useAuth } from "../context/AuthContext";
 
 interface JobFormModalProps {
   job: JobPosting | null; // null = creating new
@@ -13,16 +14,19 @@ interface JobFormModalProps {
 const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Temporary"];
 
 export default function JobFormModal({ job, onClose, onSaved }: JobFormModalProps) {
+  const { currentRecruiter } = useAuth();
   const isEditing = job !== null;
+
   const [form, setForm] = useState<JobPayload>({
     client: job?.client || "",
     position_title: job?.position_title || "",
     employment_type: job?.employment_type || EMPLOYMENT_TYPES[0],
     location: job?.location || "",
-    recruiter: job?.recruiter || "",
+    recruiter: job?.created_by_recruiter || currentRecruiter || "",
     openings: job?.openings ?? 1,
     remark: job?.remark || "",
   });
+  const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -36,11 +40,19 @@ export default function JobFormModal({ job, onClose, onSaved }: JobFormModalProp
       setError("Client, position title, and employment type are required.");
       return;
     }
+    if (!form.recruiter) {
+      setError("Select which recruiter this posting belongs to.");
+      return;
+    }
+    if (isEditing && !pin.trim()) {
+      setError("Enter your PIN to confirm this change.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
       if (isEditing) {
-        await jobBoardApi.updateJob(job.id, form);
+        await jobBoardApi.updateJob(job.id, { ...form, pin: pin.trim() });
       } else {
         await jobBoardApi.createJob(form);
       }
@@ -119,19 +131,25 @@ export default function JobFormModal({ job, onClose, onSaved }: JobFormModalProp
 
           <div className="field-row">
             <div className="field-group">
-              <label className="field-label">Recruiter</label>
+              <label className="field-label">Recruiter (owner) *</label>
               <select
                 className="field-select"
-                value={form.recruiter || ""}
+                value={form.recruiter}
                 onChange={(e) => update("recruiter", e.target.value)}
+                disabled={isEditing}
               >
-                <option value="">Unassigned</option>
+                <option value="">Select recruiter</option>
                 {RECRUITERS.map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
                 ))}
               </select>
+              {isEditing ? (
+                <div className="field-hint">Ownership can't be transferred once a posting is created.</div>
+              ) : (
+                <div className="field-hint">You'll need this recruiter's PIN to edit or delete it later.</div>
+              )}
             </div>
             <div className="field-group">
               <label className="field-label">Openings</label>
@@ -154,6 +172,20 @@ export default function JobFormModal({ job, onClose, onSaved }: JobFormModalProp
               placeholder="Notes about this posting..."
             />
           </div>
+
+          {isEditing && (
+            <div className="field-group">
+              <label className="field-label">{form.recruiter}'s PIN *</label>
+              <input
+                className="field-input"
+                type="password"
+                inputMode="numeric"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="Enter PIN to confirm this edit"
+              />
+            </div>
+          )}
         </div>
 
         <div className="modal-footer">
