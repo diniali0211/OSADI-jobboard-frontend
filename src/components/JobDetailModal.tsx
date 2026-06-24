@@ -33,6 +33,7 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
   const [hireTarget, setHireTarget] = useState<JobCandidate | null>(null);
   const [rejectTarget, setRejectTarget] = useState<JobCandidate | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [resumeLoadingId, setResumeLoadingId] = useState<number | null>(null);
 
   const loadCandidates = useCallback(async () => {
     setIsLoading(true);
@@ -58,7 +59,7 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
     setUploadNotice(null);
     try {
       const result = await jobBoardApi.uploadResumeForJob(job.id, file);
-     if (result.duplicate) {
+      if (result.duplicate) {
         if (result.already_linked_to_this_job) {
           setUploadNotice(
             "This candidate is already linked to this job — nothing changed."
@@ -104,6 +105,23 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
       onChanged();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Couldn't update this candidate.");
+    }
+  }
+
+  async function handleViewResume(candidate: JobCandidate) {
+    setActionError(null);
+    setResumeLoadingId(candidate.id);
+    try {
+      const { url } = await jobBoardApi.getResumeUrl(candidate.id);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setActionError(
+        err instanceof ApiError
+          ? `Couldn't open this resume: ${err.message}`
+          : "Couldn't open this resume right now."
+      );
+    } finally {
+      setResumeLoadingId(null);
     }
   }
 
@@ -220,14 +238,13 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
 
               <div className="candidate-actions">
                 {c.resume_url && (
-                  <a
+                  <button
                     className="btn btn-secondary btn-sm"
-                    href={c.resume_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => handleViewResume(c)}
+                    disabled={resumeLoadingId === c.id}
                   >
-                    View resume
-                  </a>
+                    {resumeLoadingId === c.id ? <span className="spinner spinner-dark" /> : "View resume"}
+                  </button>
                 )}
                 {c.status !== "HIRED" && c.status !== "REJECTED" && (
                   <>
