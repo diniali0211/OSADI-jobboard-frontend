@@ -1,5 +1,6 @@
 import { Briefcase, ShieldCheck, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import RecruiterIdentityPicker from "./RecruiterIdentityPicker";
 
 export type Page = "jobs" | "pins";
 
@@ -39,6 +40,7 @@ export default function Sidebar({ page, onNavigate }: SidebarProps) {
       </nav>
 
       <div className="sidebar-footer">
+        <RecruiterIdentityPicker />
         <button className="sidebar-lock-btn" onClick={lock}>
           <LogOut size={15} />
           Lock workspace
