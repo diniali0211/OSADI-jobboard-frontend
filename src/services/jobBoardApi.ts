@@ -90,6 +90,11 @@ export const jobBoardApi = {
     return handle(res);
   },
 
+  async getResumeUrl(candidateId: number): Promise<{ url: string }> {
+    const res = await fetch(`${BASE_URL}/candidates/${candidateId}/resume-url`);
+    return handle(res);
+  },
+
   // ---- Decisions ----
   async setDecision(payload: DecisionPayload): Promise<{ status: string }> {
     const res = await fetch(`${BASE_URL}/decision`, {
