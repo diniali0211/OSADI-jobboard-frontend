@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, Briefcase, CheckCircle2, Plus, Trash2, Users } from "lucide-react";
+import { AlertCircle, Briefcase, CheckCircle2, Lock, Plus, Trash2, Users } from "lucide-react";
 import type { JobPosting } from "../types";
 import { jobBoardApi, ApiError } from "../services/jobBoardApi";
+import { useAuth } from "../context/AuthContext";
 import JobFormModal from "./JobFormModal";
 import JobDetailModal from "./JobDetailModal";
 
 export default function JobPostings() {
+  const { currentRecruiter } = useAuth();
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,6 +15,8 @@ export default function JobPostings() {
   const [formTarget, setFormTarget] = useState<JobPosting | "new" | null>(null);
   const [detailTarget, setDetailTarget] = useState<JobPosting | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JobPosting | null>(null);
+  const [deletePin, setDeletePin] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const loadJobs = useCallback(async () => {
@@ -49,13 +53,23 @@ export default function JobPostings() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
+    if (!currentRecruiter) {
+      setDeleteError("Pick who you are from the sidebar first.");
+      return;
+    }
+    if (!deletePin.trim()) {
+      setDeleteError("Enter your PIN to confirm.");
+      return;
+    }
     setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await jobBoardApi.deleteJob(deleteTarget.id);
+      await jobBoardApi.deleteJob(deleteTarget.id, { recruiter: currentRecruiter, pin: deletePin.trim() });
       setDeleteTarget(null);
+      setDeletePin("");
       await loadJobs();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't delete this posting.");
+      setDeleteError(err instanceof ApiError ? err.message : "Couldn't delete this posting.");
     } finally {
       setIsDeleting(false);
     }
@@ -68,11 +82,23 @@ export default function JobPostings() {
           <h1 className="page-title">Job Postings</h1>
           <p className="page-subtitle">Track openings, link resumes, and confirm hires.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setFormTarget("new")}>
+        <button
+          className="btn btn-primary"
+          onClick={() => setFormTarget("new")}
+          disabled={!currentRecruiter}
+          title={currentRecruiter ? undefined : "Pick who you are from the sidebar first"}
+        >
           <Plus size={16} />
           New posting
         </button>
       </div>
+
+      {!currentRecruiter && (
+        <div className="banner banner-warning" style={{ maxWidth: 600 }}>
+          <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>Pick who you are from the sidebar to create postings or manage your own.</span>
+        </div>
+      )}
 
       <div className="stat-row">
         <div className="stat-card">
@@ -170,22 +196,36 @@ export default function JobPostings() {
                       </td>
                       <td>{job.date_filled ? new Date(job.date_filled).toLocaleDateString("en-MY") : "—"}</td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => setFormTarget(job)}
-                            title="Edit posting"
+                        {job.created_by_recruiter && job.created_by_recruiter === currentRecruiter ? (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => setFormTarget(job)}
+                              title="Edit posting"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => setDeleteTarget(job)}
+                              title="Delete posting"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            style={{ display: "flex", alignItems: "center", gap: 5, color: "var(--color-text-muted)", fontSize: 12.5 }}
+                            title={
+                              job.created_by_recruiter
+                                ? `Only ${job.created_by_recruiter} can edit this`
+                                : "This posting can't be edited"
+                            }
                           >
-                            Edit
-                          </button>
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => setDeleteTarget(job)}
-                            title="Delete posting"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                            <Lock size={12} />
+                            View only
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -216,23 +256,64 @@ export default function JobPostings() {
       )}
 
       {deleteTarget && (
-        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setDeleteTarget(null);
+            setDeletePin("");
+            setDeleteError(null);
+          }}
+        >
           <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="modal-header">
               <h2 className="modal-title">Delete posting?</h2>
-              <button className="modal-close" onClick={() => setDeleteTarget(null)}>
+              <button
+                className="modal-close"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeletePin("");
+                  setDeleteError(null);
+                }}
+              >
                 ✕
               </button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, margin: 0 }}>
+              <p style={{ fontSize: 14, marginTop: 0 }}>
                 This removes <strong>{deleteTarget.position_title}</strong> at {deleteTarget.client}.
                 Linked candidates stay in the system but lose their link to this posting. This can't be
                 undone.
               </p>
+
+              {deleteError && (
+                <div className="banner banner-danger">
+                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>{deleteError}</span>
+                </div>
+              )}
+
+              <div className="field-group">
+                <label className="field-label">{currentRecruiter || "Your"} PIN</label>
+                <input
+                  className="field-input"
+                  type="password"
+                  inputMode="numeric"
+                  value={deletePin}
+                  onChange={(e) => setDeletePin(e.target.value)}
+                  placeholder="Enter your PIN to confirm"
+                  autoFocus
+                />
+              </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeletePin("");
+                  setDeleteError(null);
+                }}
+              >
                 Cancel
               </button>
               <button className="btn btn-danger" onClick={handleDelete} disabled={isDeleting}>
