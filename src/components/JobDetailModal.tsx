@@ -4,6 +4,7 @@ import type { JobCandidate, JobPosting } from "../types";
 import { jobBoardApi, ApiError } from "../services/jobBoardApi";
 import HireConfirmModal from "./HireConfirmModal";
 import RejectModal from "./RejectModal";
+import CandidateDetailModal from "./CandidateDetailModal";
 
 interface JobDetailModalProps {
   job: JobPosting;
@@ -34,6 +35,7 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
   const [rejectTarget, setRejectTarget] = useState<JobCandidate | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [resumeLoadingId, setResumeLoadingId] = useState<number | null>(null);
+  const [detailTarget, setDetailTarget] = useState<JobCandidate | null>(null);
 
   const loadCandidates = useCallback(async () => {
     setIsLoading(true);
@@ -219,7 +221,23 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
           {candidates.map((c) => (
             <div key={c.link_id} className="candidate-card">
               <div>
-                <div className="candidate-name">{c.name || "Unnamed candidate"}</div>
+                <button
+                  className="candidate-name"
+                  onClick={() => setDetailTarget(c)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    textDecoration: "underline",
+                    textDecorationColor: "transparent",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.textDecorationColor = "currentColor")}
+                  onMouseLeave={(e) => (e.currentTarget.style.textDecorationColor = "transparent")}
+                >
+                  {c.name || "Unnamed candidate"}
+                </button>
                 <div className="candidate-meta">
                   {c.email && <span>{c.email}</span>}
                   {c.phone && <span>{c.phone}</span>}
@@ -264,6 +282,10 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
           ))}
         </div>
       </div>
+
+      {detailTarget && (
+        <CandidateDetailModal candidate={detailTarget} onClose={() => setDetailTarget(null)} />
+      )}
 
       {hireTarget && (
         <HireConfirmModal
