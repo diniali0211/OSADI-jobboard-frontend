@@ -99,10 +99,14 @@ export interface AnalyzeResult {
 }
 
 export interface DecisionPayload {
+  // Identifies WHICH job-relationship this decision applies to — a
+  // candidate can be linked to multiple jobs, each with its own status.
   link_id: number;
   decision: CandidateStatus;
   reason?: string | null;
-  recruiter?: string | null;
+  // Required for every decision — the backend verifies this matches the
+  // job's owner before allowing any change.
+  recruiter: string;
   pin?: string | null;
 }
 export interface ApiErrorBody {
