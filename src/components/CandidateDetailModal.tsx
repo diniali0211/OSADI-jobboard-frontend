@@ -1,9 +1,21 @@
 import { Briefcase, GraduationCap, Mail, MapPin, Phone, Target } from "lucide-react";
-import type { JobCandidate } from "../types";
 import { parseResumeAnalysis } from "../utils/parseResumeAnalysis";
 
+// Accepts the fields shared by both JobCandidate and Applicant — this
+// modal only ever reads basic contact/resume info, never link- or
+// job-specific fields, so it works for either shape without duplication.
+interface CandidateLike {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  score: number | null;
+  resume_text: string | null;
+  created_at: string | null;
+}
+
 interface CandidateDetailModalProps {
-  candidate: JobCandidate;
+  candidate: CandidateLike;
   onClose: () => void;
 }
 
