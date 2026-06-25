@@ -1,5 +1,6 @@
 import type {
   AnalyzeResult,
+  Applicant,
   DecisionPayload,
   JobAuthPayload,
   JobCandidate,
@@ -102,6 +103,25 @@ export const jobBoardApi = {
     // link — this asks the backend (which asks the main ATS) for a real,
     // openable URL on demand.
     const res = await fetch(`${BASE_URL}/candidates/${candidateId}/resume-url`);
+    return handle(res);
+  },
+
+  // ---- Applicants (public portal submissions not yet linked to a job) ----
+  async listApplicants(): Promise<Applicant[]> {
+    const res = await fetch(`${BASE_URL}/applicants`);
+    return handle(res);
+  },
+
+  async moveApplicantToJob(
+    candidateId: number,
+    jobId: number,
+    recruiter: string
+  ): Promise<{ status: string; link_id: number; already_linked: boolean }> {
+    const res = await fetch(`${BASE_URL}/applicants/${candidateId}/move-to-job/${jobId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recruiter }),
+    });
     return handle(res);
   },
 
