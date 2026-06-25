@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./components/Login";
 import Sidebar, { type Page } from "./components/Sidebar";
 import JobPostings from "./components/JobPostings";
+import Applicants from "./components/Applicants";
 import RecruiterPins from "./components/RecruiterPins";
 import "./App.css";
 
@@ -17,7 +18,9 @@ function AppShell() {
   return (
     <div className="app-shell">
       <Sidebar page={page} onNavigate={setPage} />
-      {page === "jobs" ? <JobPostings /> : <RecruiterPins />}
+      {page === "jobs" && <JobPostings />}
+      {page === "applicants" && <Applicants />}
+      {page === "pins" && <RecruiterPins />}
     </div>
   );
 }
