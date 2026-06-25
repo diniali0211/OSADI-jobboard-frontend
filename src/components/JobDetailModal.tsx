@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, Upload, UserRound } from "lucide-react";
+import { AlertCircle, Lock, Upload, UserRound } from "lucide-react";
 import type { JobCandidate, JobPosting } from "../types";
 import { jobBoardApi, ApiError } from "../services/jobBoardApi";
+import { useAuth } from "../context/AuthContext";
 import HireConfirmModal from "./HireConfirmModal";
 import RejectModal from "./RejectModal";
 import CandidateDetailModal from "./CandidateDetailModal";
@@ -22,6 +23,9 @@ function formatDate(iso: string | null) {
 }
 
 export default function JobDetailModal({ job, onClose, onChanged }: JobDetailModalProps) {
+  const { currentRecruiter } = useAuth();
+  const isOwner = job.created_by_recruiter !== null && job.created_by_recruiter === currentRecruiter;
+
   const [candidates, setCandidates] = useState<JobCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -56,11 +60,12 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
   }, [loadCandidates]);
 
   async function handleFile(file: File) {
+    if (!isOwner || !currentRecruiter) return; // UI shouldn't allow this, but guard anyway
     setIsUploading(true);
     setUploadError(null);
     setUploadNotice(null);
     try {
-      const result = await jobBoardApi.uploadResumeForJob(job.id, file);
+      const result = await jobBoardApi.uploadResumeForJob(job.id, file, currentRecruiter);
       if (result.duplicate) {
         if (result.already_linked_to_this_job) {
           setUploadNotice(
@@ -100,9 +105,10 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
   }
 
   async function handleKiv(candidate: JobCandidate) {
+    if (!currentRecruiter) return;
     setActionError(null);
     try {
-      await jobBoardApi.setDecision({ link_id: candidate.link_id, decision: "KIV" });
+      await jobBoardApi.setDecision({ link_id: candidate.link_id, decision: "KIV", recruiter: currentRecruiter });
       await loadCandidates();
       onChanged();
     } catch (err) {
@@ -144,41 +150,55 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
         </div>
 
         <div className="modal-body">
-          <div
-            className={`upload-dropzone ${isDragOver ? "dragover" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragOver(true);
-            }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={onDrop}
-            onClick={() => document.getElementById(`job-upload-${job.id}`)?.click()}
-          >
-            <input
-              id={`job-upload-${job.id}`}
-              type="file"
-              accept=".pdf,.doc,.docx,image/*"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFile(file);
-                e.target.value = "";
+          {isOwner ? (
+            <div
+              className={`upload-dropzone ${isDragOver ? "dragover" : ""}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
               }}
-            />
-            {isUploading ? (
-              <span className="spinner spinner-dark" />
-            ) : (
-              <>
-                <Upload size={22} style={{ marginBottom: 8 }} />
-                <div style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                  Drop a resume here, or click to browse
-                </div>
-                <div className="field-hint">
-                  Parsed by the main ATS and linked to this job automatically
-                </div>
-              </>
-            )}
-          </div>
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={onDrop}
+              onClick={() => document.getElementById(`job-upload-${job.id}`)?.click()}
+            >
+              <input
+                id={`job-upload-${job.id}`}
+                type="file"
+                accept=".pdf,.doc,.docx,image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFile(file);
+                  e.target.value = "";
+                }}
+              />
+              {isUploading ? (
+                <span className="spinner spinner-dark" />
+              ) : (
+                <>
+                  <Upload size={22} style={{ marginBottom: 8 }} />
+                  <div style={{ fontWeight: 600, color: "var(--color-text)" }}>
+                    Drop a resume here, or click to browse
+                  </div>
+                  <div className="field-hint">
+                    Parsed by the main ATS and linked to this job automatically
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div
+              className="banner banner-warning"
+              style={{ alignItems: "center" }}
+            >
+              <Lock size={16} style={{ flexShrink: 0 }} />
+              <span>
+                {job.created_by_recruiter
+                  ? `View only — only ${job.created_by_recruiter} can upload, KIV, reject, or hire on this posting.`
+                  : "View only — this posting predates recruiter ownership tracking, so no one can act on it through this flow."}
+              </span>
+            </div>
+          )}
 
           {uploadError && (
             <div className="banner banner-danger" style={{ marginTop: 12 }}>
@@ -264,7 +284,7 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
                     {resumeLoadingId === c.id ? <span className="spinner spinner-dark" /> : "View resume"}
                   </button>
                 )}
-                {c.status !== "HIRED" && c.status !== "REJECTED" && (
+                {isOwner && c.status !== "HIRED" && c.status !== "REJECTED" && (
                   <>
                     <button className="btn btn-secondary btn-sm" onClick={() => handleKiv(c)}>
                       KIV
@@ -287,10 +307,10 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
         <CandidateDetailModal candidate={detailTarget} onClose={() => setDetailTarget(null)} />
       )}
 
-      {hireTarget && (
+      {hireTarget && job.created_by_recruiter && (
         <HireConfirmModal
           candidate={hireTarget}
-          defaultRecruiter={job.recruiter}
+          jobOwner={job.created_by_recruiter}
           onClose={() => setHireTarget(null)}
           onConfirmed={async () => {
             setHireTarget(null);
@@ -300,9 +320,10 @@ export default function JobDetailModal({ job, onClose, onChanged }: JobDetailMod
         />
       )}
 
-      {rejectTarget && (
+      {rejectTarget && job.created_by_recruiter && (
         <RejectModal
           candidate={rejectTarget}
+          recruiter={job.created_by_recruiter}
           onClose={() => setRejectTarget(null)}
           onConfirmed={async () => {
             setRejectTarget(null);
