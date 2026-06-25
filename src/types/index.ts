@@ -112,3 +112,16 @@ export interface DecisionPayload {
 export interface ApiErrorBody {
   detail?: string;
 }
+
+export interface Applicant {
+  id: number;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  score: number | null;
+  role_applied: string | null;
+  resume_text: string | null;
+  resume_url: string | null;
+  created_at: string | null;
+}
