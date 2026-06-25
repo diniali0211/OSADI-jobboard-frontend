@@ -1,8 +1,8 @@
-import { Briefcase, ShieldCheck, LogOut } from "lucide-react";
+import { Briefcase, Inbox, ShieldCheck, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import RecruiterIdentityPicker from "./RecruiterIdentityPicker";
 
-export type Page = "jobs" | "pins";
+export type Page = "jobs" | "applicants" | "pins";
 
 interface SidebarProps {
   page: Page;
@@ -29,6 +29,13 @@ export default function Sidebar({ page, onNavigate }: SidebarProps) {
         >
           <Briefcase size={17} />
           Job Postings
+        </button>
+        <button
+          className={`sidebar-link ${page === "applicants" ? "active" : ""}`}
+          onClick={() => onNavigate("applicants")}
+        >
+          <Inbox size={17} />
+          Applicants
         </button>
         <button
           className={`sidebar-link ${page === "pins" ? "active" : ""}`}
