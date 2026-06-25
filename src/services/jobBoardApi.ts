@@ -86,9 +86,10 @@ export const jobBoardApi = {
     return handle(res);
   },
 
-  async uploadResumeForJob(jobId: number, file: File): Promise<AnalyzeResult> {
+  async uploadResumeForJob(jobId: number, file: File, recruiter: string): Promise<AnalyzeResult> {
     const form = new FormData();
     form.append("file", file);
+    form.append("recruiter", recruiter);
     const res = await fetch(`${BASE_URL}/jobs/${jobId}/candidates`, {
       method: "POST",
       body: form,
