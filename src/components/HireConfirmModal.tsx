@@ -1,34 +1,28 @@
 import { useState } from "react";
 import { AlertCircle, KeyRound } from "lucide-react";
-import { RECRUITERS } from "../types";
 import type { JobCandidate } from "../types";
 import { jobBoardApi, ApiError } from "../services/jobBoardApi";
 
 interface HireConfirmModalProps {
   candidate: JobCandidate;
-  defaultRecruiter?: string | null;
+  jobOwner: string; // the job's owner — the only recruiter who can hire on it
   onClose: () => void;
   onConfirmed: () => void;
 }
 
 export default function HireConfirmModal({
   candidate,
-  defaultRecruiter,
+  jobOwner,
   onClose,
   onConfirmed,
 }: HireConfirmModalProps) {
-  const [recruiter, setRecruiter] = useState(defaultRecruiter || "");
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleConfirm() {
-    if (!recruiter) {
-      setError("Select which recruiter made this hire.");
-      return;
-    }
     if (!pin.trim()) {
-      setError("Enter the recruiter's PIN to confirm.");
+      setError("Enter your PIN to confirm.");
       return;
     }
     setIsSubmitting(true);
@@ -37,7 +31,7 @@ export default function HireConfirmModal({
       await jobBoardApi.setDecision({
         link_id: candidate.link_id,
         decision: "HIRED",
-        recruiter,
+        recruiter: jobOwner,
         pin: pin.trim(),
       });
       onConfirmed();
@@ -67,8 +61,8 @@ export default function HireConfirmModal({
         <div className="modal-body">
           <p style={{ fontSize: 14, color: "var(--color-text-muted)", marginTop: 0 }}>
             Marking <strong style={{ color: "var(--color-text)" }}>{candidate.name || "this candidate"}</strong>{" "}
-            as hired. The recruiter's PIN confirms they're the one crediting this hire — it can't be
-            undone by someone else later.
+            as hired, credited to <strong style={{ color: "var(--color-text)" }}>{jobOwner}</strong>. Your PIN
+            confirms it's really you — it can't be undone by someone else later.
           </p>
 
           {error && (
@@ -79,24 +73,7 @@ export default function HireConfirmModal({
           )}
 
           <div className="field-group">
-            <label className="field-label">Recruiter</label>
-            <select
-              className="field-select"
-              value={recruiter}
-              onChange={(e) => setRecruiter(e.target.value)}
-              autoFocus
-            >
-              <option value="">Select recruiter</option>
-              {RECRUITERS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field-group">
-            <label className="field-label">PIN</label>
+            <label className="field-label">{jobOwner}'s PIN</label>
             <div style={{ position: "relative" }}>
               <KeyRound
                 size={15}
@@ -115,6 +92,7 @@ export default function HireConfirmModal({
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 placeholder="Enter your PIN"
+                autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleConfirm();
                 }}
