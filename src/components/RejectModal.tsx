@@ -6,6 +6,7 @@ import { jobBoardApi, ApiError } from "../services/jobBoardApi";
 
 interface RejectModalProps {
   candidate: JobCandidate;
+  recruiter: string; // the job's owner, required for the ownership check
   onClose: () => void;
   onConfirmed: () => void;
 }
@@ -19,7 +20,7 @@ const REASON_LABELS: Record<string, string> = {
   VETTING: "Failed vetting",
 };
 
-export default function RejectModal({ candidate, onClose, onConfirmed }: RejectModalProps) {
+export default function RejectModal({ candidate, recruiter, onClose, onConfirmed }: RejectModalProps) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,6 +37,7 @@ export default function RejectModal({ candidate, onClose, onConfirmed }: RejectM
         link_id: candidate.link_id,
         decision: "REJECTED",
         reason,
+        recruiter,
       });
       onConfirmed();
     } catch (err) {
